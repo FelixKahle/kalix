@@ -137,6 +137,7 @@ namespace kalix
         {
             DCHECK_GE(index, 0);
             DCHECK_LT(index, static_cast<int64_t>(values.size()));
+
             return static_cast<double>(values[index]);
         }
 
@@ -147,10 +148,18 @@ namespace kalix
         void clear()
         {
             // Performance heuristic for sparse vs dense reset
+            // If fewer than 30% of entries are non-zero, zero only those. Otherwise, reset all.
+            // This is the same as
+            // non_zero_count < 0.3 × total_size
+            // but by using integer arithmetic to avoid floating-point division which is slightly
+            // less efficient.
             if (10 * non_zero_indices.size() < 3 * values.size())
             {
                 for (const int64_t i : non_zero_indices)
                 {
+                    DCHECK_GE(i, 0);
+                    DCHECK_LT(i, static_cast<int64_t>(values.size()));
+
                     values[i] = CompensatedDouble(0.0);
                 }
             }
@@ -193,6 +202,8 @@ namespace kalix
             for (int64_t i = num_nz - 1; i >= 0; --i)
             {
                 int64_t pos = non_zero_indices[i];
+                DCHECK_GE(pos, 0);
+                DCHECK_LT(pos, static_cast<int64_t>(values.size()));
 
                 if (auto val = static_cast<double>(values[pos]); isZero(pos, val))
                 {
