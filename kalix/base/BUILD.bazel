@@ -41,6 +41,14 @@ cc_library(
     deps = [],
 )
 
+cc_library(
+    name = "constants",
+    hdrs = [
+        "constants.h",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 cc_test(
     name = "system_info_test",
     srcs = ["system_info_test.cpp"],
@@ -66,6 +74,28 @@ cc_test(
     srcs = ["compensated_double_test.cpp"],
     deps = [
         ":compensated_double",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "vector",
+    hdrs = [
+        "vector.h",
+    ],
+    deps = [
+        ":config",
+        ":constants",
+        "@abseil-cpp//absl/log:check",
+    ],
+)
+
+cc_test(
+    name = "vector_test",
+    srcs = ["vector_test.cpp"],
+    deps = [
+        ":vector",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
