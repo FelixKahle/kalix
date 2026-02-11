@@ -70,3 +70,25 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "sparse_vector_sum",
+    hdrs = [
+        "sparse_vector_sum.h",
+    ],
+    deps = [
+        ":compensated_double",
+        ":config",
+        "@abseil-cpp//absl/log:check",
+    ],
+)
+
+cc_test(
+    name = "sparse_vector_sum_test",
+    srcs = ["sparse_vector_sum_test.cpp"],
+    deps = [
+        ":sparse_vector_sum",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

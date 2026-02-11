@@ -337,7 +337,10 @@ namespace kalix
         }
 
         /// @brief Greater-than comparison (Compensated > double).
-        KALIX_FORCE_INLINE bool operator>(const double other) const { return static_cast<double>(*this) > other; }
+        KALIX_FORCE_INLINE bool operator>(const double other) const
+        {
+            return static_cast<double>(*this) > other;
+        }
 
         /// @brief Greater-than comparison (double > Compensated).
         friend KALIX_FORCE_INLINE bool operator>(const double a, const CompensatedDouble& b)
@@ -352,7 +355,10 @@ namespace kalix
         }
 
         /// @brief Less-than comparison (Compensated < double).
-        KALIX_FORCE_INLINE bool operator<(const double other) const { return static_cast<double>(*this) < other; }
+        KALIX_FORCE_INLINE bool operator<(const double other) const
+        {
+            return static_cast<double>(*this) < other;
+        }
 
         /// @brief Less-than comparison (double < Compensated).
         friend KALIX_FORCE_INLINE bool operator<(const double a, const CompensatedDouble& b)
@@ -367,7 +373,10 @@ namespace kalix
         }
 
         /// @brief Greater-than-or-equal comparison (Compensated >= double).
-        KALIX_FORCE_INLINE bool operator>=(const double other) const { return static_cast<double>(*this) >= other; }
+        KALIX_FORCE_INLINE bool operator>=(const double other) const
+        {
+            return static_cast<double>(*this) >= other;
+        }
 
         /// @brief Greater-than-or-equal comparison (double >= Compensated).
         friend KALIX_FORCE_INLINE bool operator>=(const double a, const CompensatedDouble& b)
@@ -382,7 +391,10 @@ namespace kalix
         }
 
         /// @brief Less-than-or-equal comparison (Compensated <= double).
-        KALIX_FORCE_INLINE bool operator<=(const double other) const { return static_cast<double>(*this) <= other; }
+        KALIX_FORCE_INLINE bool operator<=(const double other) const
+        {
+            return static_cast<double>(*this) <= other;
+        }
 
         /// @brief Less-than-or-equal comparison (double <= Compensated).
         friend KALIX_FORCE_INLINE bool operator<=(const double a, const CompensatedDouble& b)
@@ -397,7 +409,10 @@ namespace kalix
         }
 
         /// @brief Equality comparison (Compensated == double).
-        KALIX_FORCE_INLINE bool operator==(const double other) const { return static_cast<double>(*this) == other; }
+        KALIX_FORCE_INLINE bool operator==(const double other) const
+        {
+            return static_cast<double>(*this) == other;
+        }
 
         /// @brief Equality comparison (double == Compensated).
         friend KALIX_FORCE_INLINE bool operator==(const double a, const CompensatedDouble& b)
@@ -412,7 +427,10 @@ namespace kalix
         }
 
         /// @brief Inequality comparison (Compensated != double).
-        KALIX_FORCE_INLINE bool operator!=(const double other) const { return static_cast<double>(*this) != other; }
+        KALIX_FORCE_INLINE bool operator!=(const double other) const
+        {
+            return static_cast<double>(*this) != other;
+        }
 
         /// @brief Inequality comparison (double != Compensated).
         friend KALIX_FORCE_INLINE bool operator!=(const double a, const CompensatedDouble& b)
@@ -436,7 +454,10 @@ namespace kalix
         /// @brief Computes the absolute value.
         /// @param v The input value.
         /// @return The absolute value of `v`.
-        friend KALIX_FORCE_INLINE CompensatedDouble abs(const CompensatedDouble& v) { return v < 0 ? -v : v; }
+        friend KALIX_FORCE_INLINE CompensatedDouble abs(const CompensatedDouble& v)
+        {
+            return v < 0 ? -v : v;
+        }
 
         /// @brief Computes the square root with high precision.
         ///
@@ -509,7 +530,10 @@ namespace kalix
 
         /// @brief Rounds to the nearest integer.
         /// @note Rounds halfway cases away from zero.
-        friend KALIX_FORCE_INLINE CompensatedDouble round(const CompensatedDouble& x) { return floor(x + 0.5); }
+        friend KALIX_FORCE_INLINE CompensatedDouble round(const CompensatedDouble& x)
+        {
+            return floor(x + 0.5);
+        }
 
         /// @brief Multiplies a compensated number by an integral power of 2.
         /// @param v The value to scale.
