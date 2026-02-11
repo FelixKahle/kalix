@@ -52,7 +52,7 @@ TEST_F(VectorTest, Initialization)
     EXPECT_EQ(vec.should_update_packed_storage, false);
     EXPECT_EQ(vec.synthetic_clock_tick, 0.0);
 
-    for (const auto &val : vec.dense_values)
+    for (const auto& val : vec.dense_values)
     {
         EXPECT_DOUBLE_EQ(val, 0.0);
     }
@@ -93,7 +93,7 @@ TEST_F(VectorTest, PruneSmallValues)
 {
     // Setup values, one of which is tiny
     vec.dense_values[0] = 1.0;
-    vec.dense_values[1] = kalix::kHighsTiny * 0.1;
+    vec.dense_values[1] = kalix::kTiny * 0.1;
     vec.dense_values[2] = 5.0;
 
     vec.non_zero_indices[0] = 0;
@@ -295,10 +295,10 @@ TEST_F(VectorTest, SelfMoveAssignment)
     vec.non_zero_count = 1;
 
     // Suppress self-move warning if compiler flags are aggressive
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wself-move"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wself-move"
     vec = std::move(vec);
-    #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
 
     // Should remain unchanged
     EXPECT_DOUBLE_EQ(vec.dense_values[0], 1.0);
@@ -409,4 +409,85 @@ TEST_F(VectorTest, CapacityCheck)
 {
     // Just verify capacity is accessible and sane
     EXPECT_GE(vec.capacity(), static_cast<size_t>(kSize));
+}
+
+TEST_F(VectorTest, ReInitialization)
+{
+    // dirty the vector first
+    vec.dense_values[0] = 1.0;
+    vec.non_zero_count = 1;
+
+    // Re-setup with larger size
+    vec.setup(20);
+
+    EXPECT_EQ(vec.dimension, 20);
+    EXPECT_EQ(vec.non_zero_count, 0);
+    EXPECT_EQ(vec.dense_values.size(), 20u);
+    // Previous data should be gone/zeroed
+    EXPECT_DOUBLE_EQ(vec.dense_values[0], 0.0);
+}
+
+TEST_F(VectorTest, CopyAssignment)
+{
+    kalix::Vector<double> source;
+    source.setup(kSize);
+    source.dense_values[1] = 99.0;
+    source.non_zero_indices[0] = 1;
+    source.non_zero_count = 1;
+
+    // Copy assignment (not move)
+    vec = source;
+
+    // Target check
+    EXPECT_EQ(vec.non_zero_count, 1);
+    EXPECT_DOUBLE_EQ(vec.dense_values[1], 99.0);
+
+    // Source integrity check (should remain unchanged)
+    EXPECT_EQ(source.non_zero_count, 1);
+    EXPECT_DOUBLE_EQ(source.dense_values[1], 99.0);
+}
+
+TEST_F(VectorTest, PackEmpty)
+{
+    // Ensure packing an empty vector doesn't crash and resets flag
+    vec.should_update_packed_storage = true;
+    vec.create_packed_storage();
+
+    EXPECT_EQ(vec.packed_element_count, 0);
+    EXPECT_FALSE(vec.should_update_packed_storage);
+}
+
+TEST_F(VectorTest, SaxpyEmptyPivot)
+{
+    // Adding an empty vector should do nothing
+    kalix::Vector<double> pivot;
+    pivot.setup(kSize);
+    // pivot is empty
+
+    vec.dense_values[0] = 5.0;
+    vec.non_zero_indices[0] = 0;
+    vec.non_zero_count = 1;
+
+    vec.saxpy(1.0, &pivot);
+
+    EXPECT_DOUBLE_EQ(vec.dense_values[0], 5.0);
+    EXPECT_EQ(vec.non_zero_count, 1);
+}
+
+TEST_F(VectorTest, RebuildIndicesFullyDense)
+{
+    // Fill every element
+    for (int64_t i = 0; i < kSize; ++i)
+    {
+        vec.dense_values[i] = static_cast<double>(i + 1);
+    }
+    vec.non_zero_count = -1; // Invalidate count
+
+    vec.rebuild_indices_from_dense();
+
+    EXPECT_EQ(vec.non_zero_count, kSize);
+    for (int64_t i = 0; i < kSize; ++i)
+    {
+        EXPECT_EQ(vec.non_zero_indices[i], i);
+    }
 }

@@ -24,8 +24,8 @@
 
 namespace kalix
 {
-    constexpr double kHighsTiny = 1e-14;
-    constexpr double kHighsZero = 1e-50;
+    constexpr double kTiny = 1e-14;
+    constexpr double kZero = 1e-50;
 }
 
 #endif // KALIX_BASE_CONSTANTS_H_

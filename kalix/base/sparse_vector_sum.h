@@ -26,6 +26,7 @@
 #include <vector>
 #include <concepts>
 #include <limits>
+#include <utility>
 #include "absl/log/check.h"
 #include "kalix/base/compensated_double.h"
 
@@ -57,6 +58,58 @@ namespace kalix
         explicit KALIX_FORCE_INLINE SparseVectorSum(const int64_t dimension)
         {
             set_dimension(dimension);
+        }
+
+        /// @brief Returns an iterator to the beginning of the values vector.
+        KALIX_FORCE_INLINE auto begin()
+        {
+            return values.begin();
+        }
+
+        /// @brief Returns an iterator to the end of the values vector.
+        KALIX_FORCE_INLINE auto end()
+        {
+            return values.end();
+        }
+
+        /// @brief Returns a const iterator to the beginning of the values vector.
+        [[nodiscard]] KALIX_FORCE_INLINE auto begin() const
+        {
+            return values.begin();
+        }
+
+        /// @brief Returns a const iterator to the end of the values vector.
+        [[nodiscard]] KALIX_FORCE_INLINE auto end() const
+        {
+            return values.end();
+        }
+
+        /// @brief Provides read-write access to the element at the given index.
+        /// @param i The index to access.
+        /// @return Reference to the compensated double at index i.
+        KALIX_FORCE_INLINE CompensatedDouble& operator[](const size_t i)
+        {
+            return values[i];
+        }
+
+        /// @brief Provides read-only access to the element at the given index.
+        /// @param i The index to access.
+        /// @return Const reference to the compensated double at index i.
+        KALIX_FORCE_INLINE const CompensatedDouble& operator[](const size_t i) const
+        {
+            return values[i];
+        }
+
+        /// @brief Checks if the vector dimension is zero.
+        [[nodiscard]] KALIX_FORCE_INLINE bool empty() const
+        {
+            return values.empty();
+        }
+
+        /// @brief Returns the capacity of the underlying dense storage.
+        [[nodiscard]] KALIX_FORCE_INLINE size_t capacity() const
+        {
+            return values.capacity();
         }
 
         /// @brief Resizes the underlying dense storage.
@@ -102,7 +155,7 @@ namespace kalix
         /// @see add(const int64_t, double)
         /// @param index The vector index to modify.
         /// @param value The high-precision value to add.
-        void add(const int64_t index, const CompensatedDouble value)
+        KALIX_FORCE_INLINE void add(const int64_t index, const CompensatedDouble value)
         {
             DCHECK_GE(index, 0);
             DCHECK_LT(index, static_cast<int64_t>(values.size()));
@@ -125,7 +178,7 @@ namespace kalix
 
         /// @brief Gets the list of currently active (non-zero) indices.
         /// @return Constant reference to the vector of indices.
-        [[nodiscard]] const std::vector<int64_t>& get_non_zeros() const
+        [[nodiscard]] KALIX_FORCE_INLINE const std::vector<int64_t>& get_non_zeros() const
         {
             return non_zero_indices;
         }
@@ -145,7 +198,7 @@ namespace kalix
         ///
         /// Uses an optimized path: if the vector is very sparse, it only zeroes
         /// active indices. Otherwise, it performs a full dense reset.
-        void clear()
+        KALIX_FORCE_INLINE void clear()
         {
             // Performance heuristic for sparse vs dense reset
             // If fewer than 30% of entries are non-zero, zero only those. Otherwise, reset all.
@@ -181,7 +234,7 @@ namespace kalix
         /// @return The number of indices that satisfy the predicate.
         template <typename Pred>
             requires std::predicate<Pred, int64_t>
-        int64_t partition(Pred&& pred)
+        KALIX_FORCE_INLINE int64_t partition(Pred&& pred)
         {
             return std::partition(non_zero_indices.begin(), non_zero_indices.end(), pred) - non_zero_indices.begin();
         }
@@ -195,7 +248,7 @@ namespace kalix
         /// @param isZero Predicate to determine if a value should be pruned.
         template <typename IsZero>
             requires std::predicate<IsZero, int64_t, double>
-        void cleanup(IsZero&& isZero)
+        KALIX_FORCE_INLINE void cleanup(IsZero&& isZero)
         {
             auto num_nz = static_cast<int64_t>(non_zero_indices.size());
 
@@ -214,6 +267,22 @@ namespace kalix
             }
 
             non_zero_indices.resize(num_nz);
+        }
+
+        /// @brief Stream output operator for debugging.
+        /// Prints the vector dimension, number of non-zeros, and the active entries.
+        friend KALIX_FORCE_INLINE std::ostream& operator<<(std::ostream& os, const SparseVectorSum& v)
+        {
+            os << "SparseVectorSum(dim=" << v.values.size() << ", nnz=" << v.non_zero_indices.size() << ") {\n";
+            os << "  Non-zeros: [";
+            for (size_t i = 0; i < v.non_zero_indices.size(); ++i)
+            {
+                const int64_t idx = v.non_zero_indices[i];
+                os << "(" << idx << ": " << static_cast<double>(v.values[idx]) << ")";
+                if (i < v.non_zero_indices.size() - 1) os << ", ";
+            }
+            os << "]\n}";
+            return os;
         }
     };
 }

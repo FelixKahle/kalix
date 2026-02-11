@@ -155,14 +155,14 @@ namespace kalix
 
         /// @brief Provides read-write access to the element at the given index.
         /// @param i The index to access.
-        KALIX_FORCE_INLINE Real& operator[](size_t i)
+        KALIX_FORCE_INLINE Real& operator[](const size_t i)
         {
             return dense_values[i];
         }
 
         /// @brief Provides read-only access to the element at the given index.
         /// @param i The index to access.
-        KALIX_FORCE_INLINE const Real& operator[](size_t i) const
+        KALIX_FORCE_INLINE const Real& operator[](const size_t i) const
         {
             return dense_values[i];
         }
@@ -230,17 +230,17 @@ namespace kalix
             next_link = 0;
         }
 
-        /// @brief Filters out values smaller than @ref kHighsTiny and repacks indices.
+        /// @brief Filters out values smaller than @ref kTiny and repacks indices.
         ///
         /// If @ref non_zero_count is negative, it scans the entire dense array to rebuild
-        /// the index list, treating values < kHighsTiny as zero.
+        /// the index list, treating values < kTiny as zero.
         KALIX_FORCE_INLINE void prune_small_values()
         {
             if (non_zero_count < 0)
             {
                 for (auto& val : dense_values)
                 {
-                    if (std::abs(val) < kHighsTiny)
+                    if (std::abs(val) < kTiny)
                     {
                         val = 0;
                     }
@@ -252,7 +252,7 @@ namespace kalix
                 for (int64_t i = 0; i < non_zero_count; i++)
                 {
                     const int64_t index = non_zero_indices[i];
-                    if (const Real& value = dense_values[index]; std::abs(value) >= kHighsTiny)
+                    if (const Real& value = dense_values[index]; std::abs(value) >= kTiny)
                     {
                         non_zero_indices[current_count++] = index;
                     }
@@ -380,8 +380,8 @@ namespace kalix
                     current_indices[current_count++] = row_index;
                 }
 
-                // Tiny values are flushed to kHighsZero (symbolic zero)
-                current_values[row_index] = (std::abs(new_value) < kHighsTiny) ? kHighsZero : new_value;
+                // Tiny values are flushed to kTiny (symbolic zero)
+                current_values[row_index] = (std::abs(new_value) < kTiny) ? kZero : new_value;
             }
             non_zero_count = current_count;
         }
@@ -391,23 +391,23 @@ namespace kalix
         /// @return True if dimension, count, indices, values, and synthetic properties match.
         KALIX_FORCE_INLINE bool operator==(const Vector<Real>& other) const
         {
-            if (this->dimension != other.dimension)
+            if (dimension != other.dimension)
             {
                 return false;
             }
-            if (this->non_zero_count != other.non_zero_count)
+            if (non_zero_count != other.non_zero_count)
             {
                 return false;
             }
-            if (this->non_zero_indices != other.non_zero_indices)
+            if (non_zero_indices != other.non_zero_indices)
             {
                 return false;
             }
-            if (this->dense_values != other.dense_values)
+            if (dense_values != other.dense_values)
             {
                 return false;
             }
-            if (this->synthetic_clock_tick != other.synthetic_clock_tick)
+            if (synthetic_clock_tick != other.synthetic_clock_tick)
             {
                 return false;
             }
