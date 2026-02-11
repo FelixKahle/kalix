@@ -1,0 +1,71 @@
+name: Build and Test
+permissions:
+  contents: read
+
+on: [ push, pull_request ]
+
+jobs:
+  test:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: "Ubuntu (GCC)"
+            os: ubuntu-latest
+            cc: gcc
+            cxx: g++
+            std_flag: "--cxxopt='-std=c++23' --cxxopt='-fno-exceptions'"
+
+          - name: "Ubuntu (Clang)"
+            os: ubuntu-latest
+            cc: clang
+            cxx: clang++
+            std_flag: "--cxxopt='-std=c++23' --cxxopt='-fno-exceptions'"
+
+          - name: "macOS (Apple Clang)"
+            os: macos-latest
+            cc: clang
+            cxx: clang++
+            std_flag: "--cxxopt='-std=c++23' --cxxopt='-fno-exceptions'"
+
+          - name: "Windows (MSVC)"
+            os: windows-latest
+            cc: ""
+            cxx: ""
+            std_flag: "--cxxopt='/std:c++23preview' --cxxopt='/Zc:__cplusplus' --cxxopt='/EHs-c-' --cxxopt='/D_HAS_EXCEPTIONS=0'"
+
+    env:
+      CC: ${{ matrix.config.cc }}
+      CXX: ${{ matrix.config.cxx }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.14.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+
+      - name: Install Clang (Linux Only)
+        if: matrix.config.name == 'Ubuntu (Clang)'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+
+      - name: Build (Debug)
+        run: bazel build //... --compilation_mode=dbg ${{ matrix.config.std_flag }}
+
+      - name: Test (Debug)
+        run: bazel test //... --compilation_mode=dbg ${{ matrix.config.std_flag }} --test_output=errors
+      - name: Build (Release)
+        run: bazel build //... --compilation_mode=opt ${{ matrix.config.std_flag }}
+
+      - name: Test (Release)
+        run: bazel test //... --compilation_mode=opt ${{ matrix.config.std_flag }} --test_output=errors
