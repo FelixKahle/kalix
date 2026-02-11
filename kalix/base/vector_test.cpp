@@ -23,6 +23,7 @@
 #include <vector>
 #include <utility>
 
+#include "kalix/base/compensated_double.h"
 #include "kalix/base/vector.h"
 #include "kalix/base/constants.h"
 
@@ -490,4 +491,134 @@ TEST_F(VectorTest, RebuildIndicesFullyDense)
     {
         EXPECT_EQ(vec.non_zero_indices[i], i);
     }
+}
+
+class VectorCompensatedTest : public ::testing::Test
+{
+protected:
+    kalix::Vector<kalix::CompensatedDouble> vec;
+    const int64_t kSize = 10;
+
+    void SetUp() override
+    {
+        vec.setup(kSize);
+    }
+
+    void TearDown() override
+    {
+        vec.clear();
+    }
+};
+
+TEST_F(VectorCompensatedTest, Initialization)
+{
+    EXPECT_EQ(vec.dimension, kSize);
+    EXPECT_EQ(vec.non_zero_count, 0);
+
+    // Verify default value is essentially zero
+    for (const auto& val : vec.dense_values)
+    {
+        EXPECT_DOUBLE_EQ(static_cast<double>(val), 0.0);
+    }
+}
+
+TEST_F(VectorCompensatedTest, ArithmeticOperations)
+{
+    // Check if operator+= and basic math works through the Vector template
+    kalix::CompensatedDouble val1(10.0);
+
+    vec.dense_values[0] = val1;
+    vec.non_zero_indices[0] = 0;
+    vec.non_zero_count = 1;
+
+    // Test subscript read/write
+    vec[0] += 5.0; // Should use CompensatedDouble::operator+=(double)
+
+    EXPECT_DOUBLE_EQ(static_cast<double>(vec[0]), 15.0);
+}
+
+TEST_F(VectorCompensatedTest, SaxpyWithCompensatedDouble)
+{
+    // Pivot vector (x)
+    kalix::Vector<kalix::CompensatedDouble> pivot;
+    pivot.setup(kSize);
+    pivot.dense_values[1] = kalix::CompensatedDouble(2.0);
+    pivot.non_zero_indices[0] = 1;
+    pivot.non_zero_count = 1;
+
+    // Target vector (y)
+    vec.dense_values[1] = kalix::CompensatedDouble(10.0);
+    vec.non_zero_indices[0] = 1;
+    vec.non_zero_count = 1;
+
+    // y = y + 0.5 * x
+    // 10.0 + 0.5 * 2.0 = 11.0
+    vec.saxpy(kalix::CompensatedDouble(0.5), &pivot);
+
+    EXPECT_DOUBLE_EQ(static_cast<double>(vec.dense_values[1]), 11.0);
+}
+
+TEST_F(VectorCompensatedTest, PruneSmallValues)
+{
+    // Test that tiny CompensatedDouble values are correctly pruned.
+    // Assuming kalix::kTiny applies to the double representation.
+
+    vec.dense_values[0] = kalix::CompensatedDouble(1.0);
+    vec.dense_values[1] = kalix::CompensatedDouble(kalix::kTiny * 0.1);
+
+    vec.non_zero_indices[0] = 0;
+    vec.non_zero_indices[1] = 1;
+    vec.non_zero_count = 2;
+
+    vec.prune_small_values();
+
+    EXPECT_EQ(vec.non_zero_count, 1);
+    EXPECT_EQ(vec.non_zero_indices[0], 0);
+
+    // Check that prune zeroed out the value
+    EXPECT_DOUBLE_EQ(static_cast<double>(vec.dense_values[1]), 0.0);
+}
+
+TEST_F(VectorCompensatedTest, SquaredEuclideanNorm)
+{
+    // 3.0^2 + 4.0^2 = 25.0
+    vec.dense_values[1] = kalix::CompensatedDouble(3.0);
+    vec.dense_values[2] = kalix::CompensatedDouble(4.0);
+    vec.non_zero_indices[0] = 1;
+    vec.non_zero_indices[1] = 2;
+    vec.non_zero_count = 2;
+
+    const kalix::CompensatedDouble norm = vec.squared_euclidean_norm();
+
+    EXPECT_DOUBLE_EQ(static_cast<double>(norm), 25.0);
+}
+
+TEST_F(VectorCompensatedTest, CopyFromDoubleVector)
+{
+    // Test copying FROM a standard double vector TO a CompensatedDouble vector
+    kalix::Vector<double> source;
+    source.setup(kSize);
+    source.dense_values[1] = 42.0;
+    source.non_zero_indices[0] = 1;
+    source.non_zero_count = 1;
+
+    vec.copy_from(&source);
+
+    EXPECT_EQ(vec.non_zero_count, 1);
+    EXPECT_DOUBLE_EQ(static_cast<double>(vec.dense_values[1]), 42.0);
+}
+
+TEST_F(VectorCompensatedTest, CopyFromCompensatedVector)
+{
+    // Test copying FROM a CompensatedDouble vector TO a CompensatedDouble vector
+    kalix::Vector<kalix::CompensatedDouble> source;
+    source.setup(kSize);
+    source.dense_values[1] = kalix::CompensatedDouble(99.0);
+    source.non_zero_indices[0] = 1;
+    source.non_zero_count = 1;
+
+    vec.copy_from(&source);
+
+    EXPECT_EQ(vec.non_zero_count, 1);
+    EXPECT_DOUBLE_EQ(static_cast<double>(vec.dense_values[1]), 99.0);
 }

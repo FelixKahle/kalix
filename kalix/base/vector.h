@@ -24,13 +24,50 @@
 
 #include <cstdint>
 #include <vector>
+// ReSharper disable once CppUnusedIncludeDirective
 #include <iostream>
 #include <utility>
+
+#include "compensated_double.h"
 #include "kalix/base/config.h"
 #include "kalix/base/constants.h"
 
 namespace kalix
 {
+    /// @brief Concept checking if T is a floating-point type or behaves like a real number field.
+    ///
+    /// Requires standard arithmetic (+, -, *, /), comparisons, and construction from double.
+    template <typename T>
+    concept AlgebraicReal = std::floating_point<T> || requires(T a, T b)
+    {
+        // Arithmetic operations returning T
+        { a + b } -> std::convertible_to<T>;
+        { a - b } -> std::convertible_to<T>;
+        { a * b } -> std::convertible_to<T>;
+        { a / b } -> std::convertible_to<T>;
+
+        // Compound assignment
+        { a += b };
+        { a -= b };
+        { a *= b };
+        { a /= b };
+
+        // Unary negation
+        { -a } -> std::convertible_to<T>;
+
+        // Comparisons (including against double, implicitly or explicitly)
+        { a == b } -> std::convertible_to<bool>;
+        { a != b } -> std::convertible_to<bool>;
+        { a < b } -> std::convertible_to<bool>;
+        { a > b } -> std::convertible_to<bool>;
+
+        // Must be constructible from 0.0 (explicitly or implicitly)
+        T(0.0);
+
+        // Must be constructable from 0.
+        T(0);
+    };
+
     /// @brief A hyper-sparse vector implementation for high-performance linear algebra.
     ///
     /// This class maintains both a dense array of values and a list of indices for non-zero entries,
@@ -40,9 +77,13 @@ namespace kalix
     ///
     /// @tparam Real The floating-point type (e.g., double).
     template <typename Real>
+        requires AlgebraicReal<Real>
     class Vector
     {
     public:
+        // Layout is optimized for cache efficiency. Class members are ordered by their
+        // size from largest to smallest to minimize padding and maximize cache line utilization.
+
         /// @brief Pointer to the next vector in a linked list (if used in a pool or factorization).
         Vector* next_link;
 
@@ -214,7 +255,7 @@ namespace kalix
             {
                 for (int64_t i = 0; i < non_zero_count; i++)
                 {
-                    dense_values[non_zero_indices[i]] = 0;
+                    dense_values[non_zero_indices[i]] = Real(0);
                 }
             }
 
@@ -236,13 +277,15 @@ namespace kalix
         /// the index list, treating values < kTiny as zero.
         KALIX_FORCE_INLINE void prune_small_values()
         {
+            using std::abs;
+
             if (non_zero_count < 0)
             {
                 for (auto& val : dense_values)
                 {
-                    if (std::abs(val) < kTiny)
+                    if (abs(val) < kTiny)
                     {
-                        val = 0;
+                        val = Real(0);
                     }
                 }
             }
@@ -252,7 +295,7 @@ namespace kalix
                 for (int64_t i = 0; i < non_zero_count; i++)
                 {
                     const int64_t index = non_zero_indices[i];
-                    if (const Real& value = dense_values[index]; std::abs(value) >= kTiny)
+                    if (const Real& value = dense_values[index]; abs(value) >= kTiny)
                     {
                         non_zero_indices[current_count++] = index;
                     }
@@ -360,6 +403,8 @@ namespace kalix
         template <typename RealScalar, typename RealVector>
         KALIX_FORCE_INLINE void saxpy(const RealScalar multiplier, const Vector<RealVector>* vector_to_add)
         {
+            using std::abs;
+
             int64_t current_count = non_zero_count;
             int64_t* current_indices = &non_zero_indices[0];
             Real* current_values = &dense_values[0];
@@ -375,13 +420,13 @@ namespace kalix
                 const Real new_value = Real(original_value + multiplier * add_values[row_index]);
 
                 // If previous value was zero, we have a new non-zero entry
-                if (original_value == Real{0})
+                if (original_value == Real(0))
                 {
                     current_indices[current_count++] = row_index;
                 }
 
                 // Tiny values are flushed to kTiny (symbolic zero)
-                current_values[row_index] = (std::abs(new_value) < kTiny) ? kZero : new_value;
+                current_values[row_index] = (abs(new_value) < kTiny) ? Real(kZero) : new_value;
             }
             non_zero_count = current_count;
         }

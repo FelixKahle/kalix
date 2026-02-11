@@ -95,6 +95,7 @@ cc_test(
     name = "vector_test",
     srcs = ["vector_test.cpp"],
     deps = [
+        ":compensated_double",
         ":vector",
         "@googletest//:gtest",
         "@googletest//:gtest_main",

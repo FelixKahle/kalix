@@ -24,7 +24,10 @@
 
 namespace kalix
 {
+    /// @brief A small constant used for numerical comparisons.
     constexpr double kTiny = 1e-14;
+
+    /// @brief A very small constant used to represent "zero" in sparse structures.
     constexpr double kZero = 1e-50;
 }
 
