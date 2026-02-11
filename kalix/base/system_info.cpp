@@ -22,35 +22,37 @@
 #include "kalix/base/system_info.h"
 
 #if defined(_WIN32)
-    #include <windows.h>
-    #include <psapi.h>
-    // Link with Psapi.lib on Windows usually required,
-    // but modern MSVC links it automatically for these functions.
+#include <windows.h>
+#include <psapi.h>
+// Link with Psapi.lib on Windows usually required,
+// but modern MSVC links it automatically for these functions.
 
 #elif defined(__APPLE__)
-    #include <mach/mach.h>
+#include <mach/mach.h>
 
 #elif defined(__linux__) || defined(__linux)
-    #include <unistd.h>
-    #include <cstdio>
-    #include <sys/types.h>
-    #include <sys/stat.h>
+#include <unistd.h>
+#include <cstdio>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
-    #include <sys/types.h>
-    #include <sys/resource.h>
-    #include <unistd.h>
+#include <sys/types.h>
+#include <sys/resource.h>
+#include <unistd.h>
 
 #endif
 
-namespace kalix::system {
-
+namespace kalix::system
+{
 #if defined(_WIN32)
 
-    size_t get_process_memory_usage() {
+    size_t get_process_memory_usage()
+    {
         PROCESS_MEMORY_COUNTERS pmc;
         // Use GetCurrentProcess() pseudo-handle. No OpenProcess/CloseHandle needed.
-        if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+        if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
+        {
             return static_cast<size_t>(pmc.WorkingSetSize);
         }
         return 0;
@@ -58,12 +60,14 @@ namespace kalix::system {
 
 #elif defined(__APPLE__)
 
-    size_t get_process_memory_usage() {
+    size_t get_process_memory_usage()
+    {
         // Use MACH_TASK_BASIC_INFO to support >4GB memory reporting on 64-bit systems
         mach_task_basic_info info{};
         mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
 
-        if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &count) == KERN_SUCCESS) {
+        if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count) == KERN_SUCCESS)
+        {
             return info.resident_size;
         }
         return 0;
@@ -71,17 +75,20 @@ namespace kalix::system {
 
 #elif defined(__linux__) || defined(__linux)
 
-    size_t get_process_memory_usage() {
+    size_t get_process_memory_usage()
+    {
         // /proc/self/statm is safer and faster (no PID parsing needed)
         FILE* file = std::fopen("/proc/self/statm", "r");
-        if (!file) {
+        if (!file)
+        {
             return 0;
         }
 
         long rss_pages = 0;
         // statm format: size resident shared text lib data dt
         // We skip the first value (virtual size) and read the second (resident)
-        if (std::fscanf(file, "%*s %ld", &rss_pages) != 1) {
+        if (std::fscanf(file, "%*s %ld", &rss_pages) != 1)
+        {
             std::fclose(file);
             return 0;
         }
@@ -94,9 +101,11 @@ namespace kalix::system {
 
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
 
-    size_t get_process_memory_usage() {
+    size_t get_process_memory_usage()
+    {
         struct rusage usage;
-        if (getrusage(RUSAGE_SELF, &usage) == 0) {
+        if (getrusage(RUSAGE_SELF, &usage) == 0)
+        {
             // ru_maxrss is in Kilobytes on BSD systems
             return static_cast<size_t>(usage.ru_maxrss) * 1024;
         }
@@ -106,10 +115,10 @@ namespace kalix::system {
 #else
 
     // Fallback for unknown platforms
-    size_t get_process_memory_usage() {
+    size_t get_process_memory_usage()
+    {
         return 0;
     }
 
 #endif
-
 } // namespace kalix::system
